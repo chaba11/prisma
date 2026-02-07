@@ -266,7 +266,7 @@ export class PrismaPgAdapterFactory implements SqlMigrationAwareDriverAdapterFac
   private externalPool: pg.Pool | null
 
   constructor(
-    poolOrConfig: pg.Pool | pg.PoolConfig,
+    poolOrConfig: pg.Pool | pg.PoolConfig | string,
     private readonly options?: PrismaPgOptions,
   ) {
     if (poolOrConfig instanceof pg.Pool) {
@@ -274,7 +274,7 @@ export class PrismaPgAdapterFactory implements SqlMigrationAwareDriverAdapterFac
       this.config = poolOrConfig.options
     } else {
       this.externalPool = null
-      this.config = poolOrConfig
+      this.config = typeof poolOrConfig === 'string' ? { connectionString: poolOrConfig } : poolOrConfig
     }
   }
 

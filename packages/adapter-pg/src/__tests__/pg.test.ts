@@ -73,6 +73,41 @@ describe('PrismaPgAdapterFactory', () => {
     await adapter.dispose()
   })
 
+  it('accepts a connection string and creates an adapter', async () => {
+    const connectionString = 'postgresql://test:test@localhost:5432/test'
+    const factory = new PrismaPgAdapterFactory(connectionString)
+    const adapter = await factory.connect()
+    expect(adapter).toBeDefined()
+    expect(adapter.adapterName).toBeDefined()
+    await adapter.dispose()
+  })
+
+  it('accepts a connection string and handles pool error events', async () => {
+    const connectionString = 'postgresql://test:test@localhost:5432/test'
+    const factory = new PrismaPgAdapterFactory(connectionString)
+    const adapter = await factory.connect()
+
+    const shutdownError = new DatabaseError('terminating connection due to administrator command', 116, 'error')
+    shutdownError.severity = 'FATAL'
+    shutdownError.code = '57P01'
+
+    adapter['client'].emit('error', shutdownError)
+    await adapter.dispose()
+    const debug = getLogs()
+    expect(debug).toContain('terminating connection due to administrator command')
+  })
+
+  it('accepts a connection string with options (onPoolError callback)', async () => {
+    const connectionString = 'postgresql://test:test@localhost:5432/test'
+    const onPoolError = vi.fn()
+    const factory = new PrismaPgAdapterFactory(connectionString, { onPoolError })
+    const adapter = await factory.connect()
+    const error = new Error('Pool error')
+    adapter['client'].emit('error', error)
+    expect(onPoolError).toHaveBeenCalledWith(error)
+    await adapter.dispose()
+  })
+
   it('should remove connection error listener after transaction rollback', async () => {
     const config: pg.PoolConfig = { user: 'test', password: 'test', database: 'test', port: 5432, host: 'localhost' }
     const factory = new PrismaPgAdapterFactory(config)
